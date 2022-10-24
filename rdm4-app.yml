@@ -1,0 +1,135 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      app: rdm4-app
+      name: mysql
+    name: mysql
+  spec:
+    containers:
+    - env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: example
+      - name: MYSQL_USER
+        value: user1
+      - name: MYSQL_PASSWORD
+        value: mypa99
+      - name: MYSQL_DATABASE
+        value: redmine
+      image: registry.redhat.io/rhscl/mysql-56-rhel7 #docker.io/mysql:5.7.38
+      name: mysql
+      ports:
+      - containerPort: 3306
+        name: mysql
+      volumeMounts:
+      - mountPath: /var/lib/mysql
+        name: db-volume
+    volumes:
+    - name: db-volume
+      persistentVolumeClaim:                
+        claimName: dbclaim
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      app: rdm4-app
+      name: rdm4
+    name: rdm4
+  spec:
+    containers:
+    - env:
+      - name: REDMINE_DB_MYSQL
+        value: mysql
+      - name: REDMINE_DB_PASSWORD
+        value: example
+      - name: REDMINE_SECRET_KEY_BASE
+        value: supersecretkey
+      image: docker.io/redmine:4.2.7
+      name: rdm4
+      ports:
+      - containerPort: 3000
+        name: rdm4
+      volumeMounts:
+      - mountPath: /usr/src/redmine/files
+        name: rdm-volume-files
+      - mountPath: /usr/src/redmine/plugins
+        name: rdm-volume-plugins
+      resources:
+        limits:
+          cpu: "0.5"
+#    initContainers:
+#    - name: init-mysql
+#      image: docker.io/busybox
+#      command: ['sh', '-c', 'sleep 10']
+    volumes:
+    - name: rdm-volume-files
+      persistentVolumeClaim:                
+        claimName: rdmclaim-files
+    - name: rdm-volume-plugins
+      persistentVolumeClaim:                
+        claimName: rdmclaim-plugins
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: rdm4-app
+      name: rdm4
+    name: rdm4
+  spec:
+    ports:
+    - port: 3000
+    selector:
+      name: rdm4
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: rdm4-app
+      name: mysql
+    name: mysql
+  spec:
+    ports:
+    - port: 3306
+    selector:
+      name: mysql
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    labels:
+      app: rdm4-app
+    name: dbclaim
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Mi
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    labels:
+      app: rdm4-app
+    name: rdmclaim-files
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Mi
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    labels:
+      app: rdm4-app
+    name: rdmclaim-plugins
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Mi
+kind: List
+metadata: {}
+
